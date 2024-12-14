@@ -39,7 +39,17 @@ set(SOURCES
   src/misc.c
 )
 
-find_package(LibUSB)
+find_package(PkgConfig)
+
+if(PKG_CONFIG_FOUND)
+    pkg_check_modules(LIBUSB libusb-1.0 IMPORTED_TARGET)
+    if(LIBUSB_LINK_LIBRARIES)
+        set(LIBUSB_LIBRARIES "${LIBUSB_LINK_LIBRARIES}")
+    endif()
+else()
+    set(LIBUSB_LIBRARIES "" CACHE STRING "manual libusb path")
+    set(LIBUSB_INCLUDE_DIRS "" CACHE STRING "manual libusb includepath")
+endif()
 
 # JpegPkg name to differ from shipped with CMake
 find_package(JpegPkg QUIET)
@@ -113,14 +123,17 @@ foreach(target_name IN LISTS UVC_TARGETS)
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
       $<INSTALL_INTERFACE:include>
+      ${LIBUSB_INCLUDE_DIRS}
   )
-  target_link_libraries(${target_name}
-    # libusb-1.0 used internally so we link to it privately.
-    PRIVATE LibUSB::LibUSB ${threads}
-  )
+
   if(JPEG_FOUND)
     target_link_libraries(${target_name}
       PRIVATE JPEG::JPEG
+      ${LIBUSB_LIBRARIES}
+    )
+    else()
+    target_link_libraries(${target_name}
+      ${LIBUSB_LIBRARIES}
     )
   endif()
   set_target_properties(${target_name} PROPERTIES
